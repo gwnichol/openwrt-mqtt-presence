@@ -1,0 +1,58 @@
+#!/bin/sh /etc/rc.common
+# Basic inti script for mqtt_presence
+# Copyright 2022 Grant Nichol
+
+START=90
+USE_PROCD=1
+TCONF=/tmp/mqtt_presence.generated.conf
+CONF_WATCH=/etc/config/mosquitto
+
+convert_mqtt_general() {
+    local cfg="$1"
+
+    echo "" >> $TCONF
+
+    for name in host port id interval; do
+        config_get val $cfg $name
+        if [ -n "$val" ]; then
+            echo "broker_${name}=\"${val}\"" >> $TCONF
+        fi
+    done
+}
+
+add_presence() {
+    local cfg="$1"
+    config_get mac "$cfg" mac
+    config_get topic "$cfg" topic
+
+    echo "" >> $TCONF
+
+    if [ -n "$mac" ] && [ -n "$topic" ]; then
+        echo "add_presence \"${cfg}\" \"${topic}\" \"${mac}\"" >> $TCONF
+    fi 
+}
+
+convert_uci() {
+    rm -rf $TCONF
+    echo "Generating mqtt_presence config file in $TCONF"
+    echo "# mqtt_presence file generated from UCI config." >> $TCONF
+
+    config_load mqtt_presence
+    config_foreach convert_mqtt_general "broker"
+    config_foreach add_presence "presence"
+}
+
+start_service() {
+    convert_uci
+
+    procd_open_instance
+    procd_set_param command mqtt_presence
+    procd_append_param command "$TCONF"
+    procd_set_param file "$CONF_WATCH"
+    procd_close_instance
+}
+
+service_triggers() {
+    procd_add_reload_trigger "mqtt_presence"
+}
+

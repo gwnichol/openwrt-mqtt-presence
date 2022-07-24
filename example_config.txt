@@ -1,0 +1,14 @@
+config broker broker
+    option host 127.0.0.1
+    option port 1883
+    option id openwrt_presence
+    option interval 30
+
+config presence person1
+    option mac "6c:94:45:42:34:d3"
+    option topic "presence/openwrt/person1"
+
+config presence person2
+    option mac "6c:94:45:42:34:04"
+    option topic "presence/openwrt/person2"
+
